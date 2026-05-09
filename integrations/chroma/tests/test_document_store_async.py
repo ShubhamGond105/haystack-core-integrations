@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import operator
 import sys
 import uuid
 from unittest import mock
@@ -76,6 +77,38 @@ class TestDocumentStoreAsync(
                 host="localhost",
                 port=8000,
             )
+
+    def assert_documents_are_equal(self, received: list[Document], expected: list[Document]):
+        """
+        Assert that two lists of Documents are equal.
+        This is used in every test, if a Document Store implementation has a different behaviour
+        it should override this method.
+
+        This can happen for example when the Document Store sets a score to returned Documents.
+        Since we can't know what the score will be, we can't compare the Documents reliably.
+        """
+        received.sort(key=operator.attrgetter("id"))
+        expected.sort(key=operator.attrgetter("id"))
+
+        for doc_received, doc_expected in zip(received, expected, strict=True):
+            assert doc_received.content == doc_expected.content
+            assert doc_received.meta == doc_expected.meta
+
+    async def test_count_not_empty_async(self, document_store: ChromaDocumentStore):
+        """Test count is greater than zero if the document store contains documents.
+
+        Override: mixin method released with Haystack 2.28.0 is missing @staticmethod decorator.
+        """
+        await document_store.write_documents_async(
+            [Document(content="test doc 1"), Document(content="test doc 2"), Document(content="test doc 3")]
+        )
+        assert await document_store.count_documents_async() == 3
+
+    async def test_write_documents_async(self, document_store: ChromaDocumentStore):
+        """Override: mixin's base test raises requires implementers to override."""
+        doc = Document(content="test doc")
+        await document_store.write_documents_async([doc])
+        assert await document_store.count_documents_async() == 1
 
     # ── Chroma-specific tests (not covered by mixins) ──────────────────────
 
