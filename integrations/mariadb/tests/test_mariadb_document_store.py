@@ -110,6 +110,17 @@ class TestMariaDBDocumentStoreInit:
         store = MariaDBDocumentStore.from_dict(data)
         assert store.host == "localhost"
         assert store.embedding_dimension == 768
+    def test_write_documents_empty_list(self):
+        """Writing empty list returns 0 without touching DB."""
+        store = MariaDBDocumentStore(user="test", password="test")
+        result = store.write_documents([])
+        assert result == 0
+
+    def test_write_documents_invalid_input(self):
+        """Non-Document input raises ValueError."""
+        store = MariaDBDocumentStore(user="test", password="test")
+        with pytest.raises(ValueError):
+            store.write_documents(["not a document"])
 
 
 @pytest.mark.integration

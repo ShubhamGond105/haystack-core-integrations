@@ -4,11 +4,14 @@
 
 import json
 import logging
+import struct
+from dataclasses import replace
 from typing import Any, Literal, Optional
 
 import mariadb
 
 from haystack import default_from_dict, default_to_dict
+from haystack.dataclasses import ByteStream
 from haystack.dataclasses.document import Document
 from haystack.document_stores.errors import DocumentStoreError, DuplicateDocumentError
 from haystack.document_stores.types import DocumentStore, DuplicatePolicy
@@ -30,6 +33,12 @@ CREATE TABLE IF NOT EXISTS {table_name} (
 
 INSERT_STATEMENT = """
 INSERT INTO {table_name}
+(id, embedding, content, blob_data, blob_meta, blob_mime_type, meta)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+"""
+
+INSERT_IGNORE_STATEMENT = """
+INSERT IGNORE INTO {table_name}
 (id, embedding, content, blob_data, blob_meta, blob_mime_type, meta)
 VALUES (?, ?, ?, ?, ?, ?, ?)
 """
@@ -125,6 +134,7 @@ class MariaDBDocumentStore(DocumentStore):
             self.password = Secret.from_token(password)
         else:
             self.password = password
+
         self.table_name = table_name
         self.embedding_dimension = embedding_dimension
         self.vector_function = vector_function
@@ -154,15 +164,14 @@ class MariaDBDocumentStore(DocumentStore):
     def _ensure_db_setup(self) -> None:
         """
         Establishes DB connection and initializes the table if not done yet.
+
         Called lazily before any DB operation.
         """
-        # Reuse existing valid connection
         if self._connection is not None and self._cursor is not None:
             try:
                 self._connection.ping()
                 return
             except mariadb.Error:
-                # Connection dropped — close and reconnect
                 self.close()
 
         user = self.user.resolve_value() or ""
@@ -245,7 +254,12 @@ class MariaDBDocumentStore(DocumentStore):
         return result["cnt"] if result else 0
 
     def filter_documents(self, filters: dict[str, Any] | None = None) -> list[Document]:
-        """Returns documents matching the given filters. Full implementation in next commit."""
+        """
+        Returns documents matching the given filters.
+
+        :param filters: Optional metadata filters.
+        :returns: List of matching Documents.
+        """
         self._ensure_db_setup()
         # TODO: implement filter conversion (next commit)
         self._cursor.execute(f"SELECT * FROM {self.table_name}")
@@ -253,12 +267,47 @@ class MariaDBDocumentStore(DocumentStore):
         return _from_mariadb_to_haystack_documents(records)
 
     def write_documents(self, documents: list[Document], policy: DuplicatePolicy = DuplicatePolicy.FAIL) -> int:
-        """Writes documents to the store. Full implementation in next commit."""
-        # TODO: implement (next commit)
-        raise NotImplementedError("write_documents will be implemented in next commit")
+        """
+        Writes documents to the store.
+
+        :param documents: List of Documents to write.
+        :param policy: How to handle duplicates — FAIL, OVERWRITE, or SKIP.
+        :returns: Number of documents written.
+        """
+        if not documents:
+            return 0
+
+        if not isinstance(documents[0], Document):
+            msg = "param 'documents' must contain a list of objects of type Document"
+            raise ValueError(msg)
+
+        self._ensure_db_setup()
+
+        if policy == DuplicatePolicy.OVERWRITE:
+            sql = (INSERT_STATEMENT + UPDATE_ON_DUPLICATE_STATEMENT).format(table_name=self.table_name)
+        elif policy == DuplicatePolicy.SKIP:
+            sql = INSERT_IGNORE_STATEMENT.format(table_name=self.table_name)
+        else:  # FAIL
+            sql = INSERT_STATEMENT.format(table_name=self.table_name)
+
+        written = 0
+        for doc in documents:
+            row = _from_haystack_to_mariadb_document(doc)
+            try:
+                self._cursor.execute(sql, row)
+                written += 1
+            except mariadb.IntegrityError as e:
+                if policy == DuplicatePolicy.FAIL:
+                    raise DuplicateDocumentError from e
+
+        return written
 
     def delete_documents(self, document_ids: list[str]) -> None:
-        """Deletes documents by ID."""
+        """
+        Deletes documents by ID.
+
+        :param document_ids: List of document IDs to delete.
+        """
         if not document_ids:
             return
         self._ensure_db_setup()
@@ -272,11 +321,46 @@ class MariaDBDocumentStore(DocumentStore):
             msg = "Could not delete documents from MariaDBDocumentStore"
             raise DocumentStoreError(msg) from e
 
-def _from_mariadb_to_haystack_documents(records: list[dict[str, Any]]) -> list[Document]:
-    """Converts raw MariaDB rows to Haystack Document objects."""
-    from dataclasses import replace
-    from haystack.dataclasses import ByteStream
 
+def _from_haystack_to_mariadb_document(document: Document) -> tuple:
+    """
+    Converts a Haystack Document to a tuple for MariaDB insertion.
+
+    :param document: Haystack Document to convert.
+    :returns: Tuple of values matching the INSERT statement columns.
+    """
+    # Convert embedding list to binary bytes for VECTOR column
+    if document.embedding is not None:
+        embedding_bytes = struct.pack(f"{len(document.embedding)}f", *document.embedding)
+    else:
+        embedding_bytes = None
+
+    # Handle blob fields
+    blob_data = document.blob.data if document.blob else None
+    blob_meta = json.dumps(document.blob.meta) if document.blob and document.blob.meta else None
+    blob_mime_type = document.blob.mime_type if document.blob else None
+
+    # meta must be JSON string
+    meta = json.dumps(document.meta) if document.meta else json.dumps({})
+
+    return (
+        document.id,
+        embedding_bytes,
+        document.content,
+        blob_data,
+        blob_meta,
+        blob_mime_type,
+        meta,
+    )
+
+
+def _from_mariadb_to_haystack_documents(records: list[dict[str, Any]]) -> list[Document]:
+    """
+    Converts raw MariaDB rows to Haystack Document objects.
+
+    :param records: List of row dicts from MariaDB cursor.
+    :returns: List of Haystack Documents.
+    """
     haystack_documents = []
     for record in records:
         haystack_dict = dict(record)
@@ -295,7 +379,6 @@ def _from_mariadb_to_haystack_documents(records: list[dict[str, Any]]) -> list[D
             if hasattr(emb, "tolist"):
                 haystack_dict["embedding"] = emb.tolist()
             elif isinstance(emb, (bytes, bytearray)):
-                import struct
                 n = len(emb) // 4
                 haystack_dict["embedding"] = list(struct.unpack(f"{n}f", emb))
 
