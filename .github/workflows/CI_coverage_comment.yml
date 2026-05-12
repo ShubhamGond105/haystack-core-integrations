@@ -35,6 +35,7 @@ on:
       - "Test / libreoffice"
       - "Test / llama_cpp"
       - "Test / llama_stack"
+      - "Test / mariadb"
       - "Test / markitdown"
       - "Test / mcp"
       - "Test / meta_llama"
