@@ -1,0 +1,51 @@
+# Repository Coverage (amazon_bedrock-combined)
+
+[Full report](https://htmlpreview.github.io/?https://github.com/ShubhamGond105/haystack-core-integrations/blob/python-coverage-comment-action-data-amazon_bedrock-combined/htmlcov/index.html)
+
+| Name                                                                                         |    Stmts |     Miss |   Branch |   BrPart |   Cover |   Missing |
+|--------------------------------------------------------------------------------------------- | -------: | -------: | -------: | -------: | ------: | --------: |
+| src/haystack\_integrations/common/amazon\_bedrock/errors.py                                  |        4 |        0 |        0 |        0 |    100% |           |
+| src/haystack\_integrations/common/amazon\_bedrock/utils.py                                   |       21 |        0 |        4 |        0 |    100% |           |
+| src/haystack\_integrations/common/s3/errors.py                                               |        3 |        0 |        0 |        0 |    100% |           |
+| src/haystack\_integrations/common/s3/utils.py                                                |       49 |        0 |        8 |        0 |    100% |           |
+| src/haystack\_integrations/components/downloaders/s3/s3\_downloader.py                       |       93 |        4 |       20 |        3 |     94% |133-\>exit, 156, 176, 234-235 |
+| src/haystack\_integrations/components/embedders/amazon\_bedrock/document\_embedder.py        |      101 |        6 |       20 |        2 |     93% |171, 217-219, 253-254 |
+| src/haystack\_integrations/components/embedders/amazon\_bedrock/document\_image\_embedder.py |      123 |        4 |       32 |        2 |     96% |266-267, 274-278 |
+| src/haystack\_integrations/components/embedders/amazon\_bedrock/text\_embedder.py            |       63 |        3 |       14 |        3 |     92% |146, 148-\>153, 173-174 |
+| src/haystack\_integrations/components/generators/amazon\_bedrock/adapters.py                 |      192 |        6 |       42 |        5 |     95% |35-36, 60, 84-\>86, 154-\>152, 181, 379-\>381, 531-532 |
+| src/haystack\_integrations/components/generators/amazon\_bedrock/chat/chat\_generator.py     |      173 |       11 |       44 |        2 |     93% |564-565, 638-644, 654-656 |
+| src/haystack\_integrations/components/generators/amazon\_bedrock/chat/utils.py               |      304 |       20 |      180 |       19 |     91% |88, 203, 211-\>208, 214-215, 244-\>242, 336-337, 383-384, 420-\>422, 444-\>516, 446-\>516, 486-\>472, 489-\>472, 492-\>490, 498-\>505, 501-\>505, 543-\>631, 584-\>631, 614-\>624, 628-\>631, 672-\>679, 701-714 |
+| src/haystack\_integrations/components/generators/amazon\_bedrock/generator.py                |       97 |        0 |       16 |        0 |    100% |           |
+| src/haystack\_integrations/components/rankers/amazon\_bedrock/ranker.py                      |       79 |        0 |       12 |        0 |    100% |           |
+| **TOTAL**                                                                                    | **1302** |   **54** |  **392** |   **36** | **94%** |           |
+
+
+## Setup coverage badge
+
+Below are examples of the badges you can use in your main branch `README` file.
+
+### Direct image
+
+[![Coverage badge](https://raw.githubusercontent.com/ShubhamGond105/haystack-core-integrations/python-coverage-comment-action-data-amazon_bedrock-combined/badge.svg)](https://htmlpreview.github.io/?https://github.com/ShubhamGond105/haystack-core-integrations/blob/python-coverage-comment-action-data-amazon_bedrock-combined/htmlcov/index.html)
+
+This is the one to use if your repository is private or if you don't want to customize anything.
+
+### [Shields.io](https://shields.io) Json Endpoint
+
+[![Coverage badge](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ShubhamGond105/haystack-core-integrations/python-coverage-comment-action-data-amazon_bedrock-combined/endpoint.json)](https://htmlpreview.github.io/?https://github.com/ShubhamGond105/haystack-core-integrations/blob/python-coverage-comment-action-data-amazon_bedrock-combined/htmlcov/index.html)
+
+Using this one will allow you to [customize](https://shields.io/endpoint) the look of your badge.
+It won't work with private repositories. It won't be refreshed more than once per five minutes.
+
+### [Shields.io](https://shields.io) Dynamic Badge
+
+[![Coverage badge](https://img.shields.io/badge/dynamic/json?color=brightgreen&label=coverage&query=%24.message&url=https%3A%2F%2Fraw.githubusercontent.com%2FShubhamGond105%2Fhaystack-core-integrations%2Fpython-coverage-comment-action-data-amazon_bedrock-combined%2Fendpoint.json)](https://htmlpreview.github.io/?https://github.com/ShubhamGond105/haystack-core-integrations/blob/python-coverage-comment-action-data-amazon_bedrock-combined/htmlcov/index.html)
+
+This one will always be the same color. It won't work for private repos. I'm not even sure why we included it.
+
+## What is that?
+
+This branch is part of the
+[python-coverage-comment-action](https://github.com/marketplace/actions/python-coverage-comment)
+GitHub Action. All the files in this branch are automatically generated and may be
+overwritten at any moment.
